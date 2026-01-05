@@ -49,7 +49,42 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           details.participants.forEach((p) => {
             const li = document.createElement("li");
-            li.textContent = p;
+            li.className = "participant-item";
+
+            const span = document.createElement("span");
+            span.textContent = p;
+
+            const removeBtn = document.createElement("button");
+            removeBtn.className = "participant-delete";
+            removeBtn.title = "Unregister participant";
+            removeBtn.textContent = '🗑️';
+            removeBtn.onclick = async () => {
+              try {
+                await unregisterParticipant(name, p);
+
+                // Show a transient success message
+                messageDiv.textContent = `Unregistered ${p} from ${name}`;
+                messageDiv.className = "success";
+                messageDiv.classList.remove("hidden");
+                setTimeout(() => {
+                  messageDiv.classList.add("hidden");
+                }, 5000);
+
+                // Refresh activities so participants list updates immediately
+                fetchActivities();
+              } catch (err) {
+                messageDiv.textContent = err.message || "Failed to unregister participant.";
+                messageDiv.className = "error";
+                messageDiv.classList.remove("hidden");
+                setTimeout(() => {
+                  messageDiv.classList.add("hidden");
+                }, 5000);
+                console.error("Error unregistering:", err);
+              }
+            };
+
+            li.appendChild(span);
+            li.appendChild(removeBtn);
             participantsListEl.appendChild(li);
           });
         }
@@ -113,6 +148,17 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error signing up:", error);
     }
   });
+
+  // Helper: unregister a participant
+  async function unregisterParticipant(activity, email) {
+    const response = await fetch(
+      `/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`,
+      { method: "DELETE" }
+    );
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Unregister failed");
+    return data;
+  }
 
   // Initialize app
   fetchActivities();
